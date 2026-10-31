@@ -19,17 +19,24 @@ DSH 的插件兼容是**运行时门禁**：`peerDependencies` 里 `@deepseek-ai
 
 ## 状态
 
-**开发中（P0 骨架）**：插件可加载、两个工具已注册、离线测试通过；搜索与体检尚在实现。
+**P0 + P2 已完成**：插件可加载，`check_plugin_compat` 已可用；搜索（P1）尚在实现。
 
 | 阶段 | 内容 | 状态 |
 | --- | --- | --- |
 | P0 | 骨架：加载 + 工具注册 + 离线测试 | ✅ |
 | P1 | 搜索（GitHub `topic:dsh-plugin`） | ⬜ |
-| P2 | 兼容性体检（三态 + 依据） | ⬜ |
+| P2 | 兼容性体检（三态 + 依据） | ✅ |
 | P3 | 搜索 + 体检联动 | ⬜ |
-| P4 | 降级与缓存 | ⬜ |
+| P4 | 降级与缓存 | ⬜（数据源降级已在 P2 内实现） |
 | P5 | 测试与文档 | ⬜ |
 | P6 | 发布到 npm | ⬜ |
+
+现在就能用：
+
+```
+check_plugin_compat  target: bili-duty@0.1.3
+check_plugin_compat  target: awesome-dsh-plugin/dsh-find-plugin
+```
 
 ## 判定规则（已按 DSH 0.2.1-rc.5 源码核实）
 

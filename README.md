@@ -19,24 +19,34 @@ DSH 的插件兼容是**运行时门禁**：`peerDependencies` 里 `@deepseek-ai
 
 ## 状态
 
-**P0 + P2 已完成**：插件可加载，`check_plugin_compat` 已可用；搜索（P1）尚在实现。
+**P0 / P1 / P2 / P3 / P4 已完成**：两个工具都可用，搜索走多路线合并，体检走多路线竞速。
 
 | 阶段 | 内容 | 状态 |
 | --- | --- | --- |
 | P0 | 骨架：加载 + 工具注册 + 离线测试 | ✅ |
-| P1 | 搜索（GitHub `topic:dsh-plugin`） | ⬜ |
+| P1 | 搜索（GitHub `topic:dsh-plugin` + npm + topics 页） | ✅ |
 | P2 | 兼容性体检（三态 + 依据） | ✅ |
-| P3 | 搜索 + 体检联动 | ⬜ |
-| P4 | 降级与缓存 | ⬜（数据源降级已在 P2 内实现） |
-| P5 | 测试与文档 | ⬜ |
+| P3 | 搜索 + 体检联动（`check: true`） | ✅ |
+| P4 | 多源降级与总预算 | ✅ |
+| P5 | 测试与文档打磨 | ⬜（持续） |
 | P6 | 发布到 npm | ⬜ |
 
 现在就能用：
 
 ```
+find_dsh_plugin      query: "终端 TUI"  limit: 5
+find_dsh_plugin      query: "微信通知"  check: true limit: 3
 check_plugin_compat  target: bili-duty@0.1.3
 check_plugin_compat  target: awesome-dsh-plugin/dsh-find-plugin
 ```
+
+一次带体检的真实输出会是这样：
+
+| 插件 | 结论 | 依据 |
+| --- | --- | --- |
+| `ly6170/dsh-messager` | ✅ 兼容 | 50 个 `@deepseek-ai/dsh*` peer 全 `^0.2.0-rc.1`，覆盖当前 `0.2.1-rc.5` |
+| `cryjkd/dsh-clawbot` | ⚠️ 未声明 | 既无 `engines.dsh` 也无 dsh peer —— **门禁不拦，但不等于能用** |
+| `awesome-dsh-plugin/dsh-find-plugin` | ❌ 不兼容 | peer 锁死在 `^0.1.x` |
 
 ## 判定规则（已按 DSH 0.2.1-rc.5 源码核实）
 

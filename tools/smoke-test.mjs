@@ -139,6 +139,33 @@ if (asarPathForTest) {
   console.log('  - 跳过（未设置 BEST_FIT_TEST_ASAR）')
 }
 
+console.log('\n[4.6] well-formed 兜底（真机踩过的坑）')
+const { toWellFormedText, wellFormedDeep } = await import('../lib/sanitize.js')
+const LONE_SURROGATE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/
+check('孤立代理项被修复', () => {
+  const dirty = 'a\uD800b'
+  const fixed = toWellFormedText(dirty)
+  assert.ok(!LONE_SURROGATE.test(fixed), '仍有孤立代理项')
+  assert.ok(fixed.includes('a') && fixed.includes('b'))
+})
+check('合法代理对（emoji）被保留', () => {
+  const pair = '\uD83D\uDC1F'
+  assert.equal(toWellFormedText(pair), pair)
+})
+check('嵌套值被递归修整', () => {
+  const fixed = wellFormedDeep({ a: ['x\uDC00y'], b: 1, c: null })
+  assert.equal(typeof fixed.b, 'number')
+  assert.equal(fixed.c, null)
+  assert.ok(!LONE_SURROGATE.test(fixed.a[0]))
+})
+check('undefined 字段被剔除（JSON 往返不丢字段 → 才是 lossless）', () => {
+  const fixed = wellFormedDeep({ a: 1, b: undefined, c: { d: undefined, e: 2 } })
+  assert.equal('b' in fixed, false)
+  assert.equal('d' in fixed.c, false)
+  assert.equal(fixed.c.e, 2)
+  assert.deepEqual(JSON.parse(JSON.stringify(fixed)), fixed)
+})
+
 console.log('\n[5] 工具注册与调用')
 const registered = []
 const tools = { register: (t) => registered.push(t) }
@@ -150,12 +177,18 @@ await acheck('check_plugin_compat 在空 target 时返回 error', async () => {
   const r = await t.execute({ target: '  ' })
   assert.equal(r.status, 'error')
 })
-await acheck('check_plugin_compat 在无 runtime 且探测不到时明确要求传 runtime', async () => {
+await acheck('check_plugin_compat 在 runtime 非法时**不联网**直接报错', async () => {
   const t = registered.find((x) => x.name === 'check_plugin_compat')
-  // 不联网：target 随便给，运行时会先于网络被校验
-  const r = await t.execute({ target: 'x/y' })
-  assert.ok(['error', 'ok', 'incompatible', 'none'].includes(r.status))
-  if (r.status === 'error') assert.ok(String(r.error).length > 0)
+  const startedAt = Date.now()
+  const r = await t.execute({ target: 'not-a-real-package-xyz', runtime: 'not-a-version' })
+  assert.equal(r.status, 'error')
+  assert.ok(String(r.error).includes('runtime'), `error 应指向 runtime，实际：${r.error}`)
+  assert.ok(Date.now() - startedAt < 500, '非法 runtime 不该走网络（应 < 500ms）')
+})
+await acheck('find_dsh_plugin 在 query 为空时返回 error', async () => {
+  const t = registered.find((x) => x.name === 'find_dsh_plugin')
+  const r = await t.execute({ query: '   ' })
+  assert.equal(r.status, 'error')
 })
 check('没有 tools 服务时不崩', () => {
   assert.doesNotThrow(() => mod.apply({ get: () => undefined }))

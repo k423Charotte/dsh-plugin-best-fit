@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## 0.1.3（2026-10-31）
+
+**内置 SOCKS5 代理客户端**（用户开加速器后实测新增）：
+
+- `lib/proxy.js`：零依赖 SOCKS5 客户端（`node:net` + `node:tls` + 手写 HTTP/1.1 GET）。
+  - **自动探测**：配置 `proxyUrl` → 环境变量 → **Windows 注册表**（读 `ProxyEnable`/`ProxyServer`）；
+  - 必须走 **`socks5h` 语义**（远程 DNS）——`socks5://` 本地解析会因 DNS 被阻断而失败（实测对比）；
+  - 代理失败**自动回落直连**。
+- 「需代理」路线改为**三态**：`null`（默认，代理可用就自动放行）/ `true` 强制开 / `false` 强制关。
+- 实测 11 条外网路线：**10/11 可用**（raw 1.1s、jsDelivr 0.95s、unpkg 1.1s、api.github 1.3s、awesome-json 2.9s、dsh-plugin.org 1.6s）；
+  `ghproxy.net` 13.4s 太慢、`dshplugins.co` 域名连不上（站点侧问题）。
+- 收益：`github-contents` 路线从「3.3s 或失败」变成 **约 1.2s 稳定成功**。
+
 ## 0.1.2（2026-10-31）
 
 **兼容性独立成门槛**（用户指正：不兼容的话连用都用不了，不能混在总分里）：

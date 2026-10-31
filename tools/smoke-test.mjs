@@ -228,6 +228,56 @@ check('manifestRoutes：GitHub 降级路线带身份校验', () => {
   const fallback = routes.filter((r) => r.requireRepository)
   assert.ok(fallback.length > 0, '应至少有一条 npm 降级路线需要校验 repository 归属')
 })
+console.log('\n[4.9] 评分（可解释、可复算）')
+const { scoreCandidate, scoreActivity, scorePopularity, scoreHealth, scoreRisk, scoreCompatibility, WEIGHTS } =
+  await import('../lib/score.js')
+const NOW = Date.parse('2026-10-31T00:00:00Z')
+
+check('活跃度：7 天内 25 分', () => assert.equal(scoreActivity('2026-10-28T00:00:00Z', NOW).score, 25))
+check('活跃度：半年以上 0 分且带提醒', () => {
+  const r = scoreActivity('2026-01-01T00:00:00Z', NOW)
+  assert.equal(r.score, 0)
+  assert.ok(r.caveat)
+})
+check('人气：★100 ≈ 10 分', () => assert.equal(scorePopularity({ stars: 100 }).score, 10))
+check('人气：★1000 ≈ 15 分', () => assert.equal(scorePopularity({ stars: 1000 }).score, 15))
+check('健康：归档 = 0 且提示停止维护', () => {
+  const r = scoreHealth({ archived: true })
+  assert.equal(r.score, 0)
+  assert.ok(r.caveat.includes('停止维护'))
+})
+check('风险：安装期脚本扣满 5 分并提醒', () => {
+  const r = scoreRisk({ hasInstallScript: true })
+  assert.equal(r.score, 0)
+  assert.ok(r.caveats.some((text) => text.includes('安装期脚本')))
+})
+check('兼容：ok=40 / none=20 / incompatible=0', () => {
+  assert.equal(scoreCompatibility({ status: 'ok', fieldUsed: 'engines.dsh', requirements: {} }).score, 40)
+  assert.equal(scoreCompatibility({ status: 'none' }).score, 20)
+  assert.equal(scoreCompatibility({ status: 'incompatible', fieldUsed: 'peerDependencies' }).score, 0)
+})
+check('总分 = 分项之和，且落在 0–100', () => {
+  const r = scoreCandidate(
+    { stars: 1000, pushedAt: '2026-10-30T00:00:00Z', openIssues: 5, archived: false },
+    { compat: { status: 'ok' } },
+  )
+  const sum = Object.values(r.scoreParts).reduce((a, b) => a + b, 0)
+  assert.equal(r.score, sum)
+  assert.ok(r.score <= 100 && r.score >= 0)
+  assert.ok(Array.isArray(r.checklist) && r.checklist.length >= 4)
+})
+check('不兼容的候选应明显低于兼容的（至少差 20 分）', () => {
+  const base = { stars: 500, pushedAt: '2026-10-30T00:00:00Z', openIssues: 5 }
+  const ok = scoreCandidate(base, { compat: { status: 'ok' } }).score
+  const bad = scoreCandidate(base, { compat: { status: 'incompatible' } }).score
+  assert.ok(ok - bad >= 20, `兼容 ${ok} 与不兼容 ${bad} 差距不足`)
+})
+check('权重总和 = 100', () => {
+  const total = Object.values(WEIGHTS).reduce((a, b) => a + b, 0)
+  assert.equal(total, 100)
+})
+
+console.log('\n[5] 工具注册与调用')
 const registered = []
 const tools = { register: (t) => registered.push(t) }
 const ctx = { get: (k) => (k === 'tools' ? tools : undefined) }

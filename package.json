@@ -1,6 +1,6 @@
 {
   "name": "dsh-plugin-best-fit",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "「寻找最合适的插件」— 在会话里搜 DSH 插件，并在安装前判断它是否适配你当前的 DSH 版本。",
   "type": "module",
   "main": "lib/index.js",
@@ -52,6 +52,7 @@
   },
   "exports": {
     ".": "./lib/index.js",
+    "./client": "./lib/client.js",
     "./cordis.patch.yml": "./cordis.patch.yml",
     "./package.json": "./package.json",
     "./locale/*.json": "./locale/*.json"

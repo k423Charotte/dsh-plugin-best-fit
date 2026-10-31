@@ -1,6 +1,17 @@
 # CHANGELOG
 
-## 0.1.0（未发布）
+## 0.1.1（2026-10-31）
+
+- **P8 评分：让「最合适」有依据**。总分 = 兼容性 40 + 活跃度 25 + 人气 20 + 维护健康 10 + 风险 5；
+  每条结果都带 `score` / `scoreParts` / `checklist`（为什么给这个分的人话依据）/ `caveats`（风险与未知）。
+- **默认体检全部候选**（不再只前 3），`autoCheck` 默认开 —— **筛选本来就该有成本**，不为省时间砍条数。
+- **过滤官方内部包**：`@deepseek-ai/*` 与 `deepseek-ai` 仓库不再出现在结果里（实测搜 `sidebar` 时它们会占满前排）。
+- **修一个评分 bug**：`decorate()` 调用时多包了一层 `{ compat }`，导致兼容性恒为 10 分（体检结论没真正进评分）。
+- 体检单条加**总预算**（默认 15s）：某几条路线一起卡住时不再拖垮整轮。
+- 搜索源默认三个（npmmirror / GitHub search / npm 官方）。
+- 配置新增 `checkAll`；`checkTopN` 上限放宽到 20。
+
+## 0.1.0（已发布）
 
 - **P0 骨架**：插件可被 DSH 加载；注册 `find_dsh_plugin` 与 `check_plugin_compat`；离线冒烟测试（`npm test`）。
 - **P2 兼容性体检（可用）**：`check_plugin_compat` 接上真实现。

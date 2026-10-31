@@ -166,7 +166,68 @@ check('undefined 字段被剔除（JSON 往返不丢字段 → 才是 lossless�
   assert.deepEqual(JSON.parse(JSON.stringify(fixed)), fixed)
 })
 
-console.log('\n[5] 工具注册与调用')
+console.log('\n[4.7] 目标解析与路线构造')
+const { parseTarget, repositoryMatches, manifestRoutes } = await import('../lib/source.js')
+check('parseTarget: owner/repo → github', () => {
+  const p = parseTarget('k423Charotte/bili-duty')
+  assert.equal(p.kind, 'github')
+  assert.equal(p.owner, 'k423Charotte')
+  assert.equal(p.repo, 'bili-duty')
+})
+check('parseTarget: 包名 → npm（无版本）', () => {
+  const p = parseTarget('bili-duty')
+  assert.equal(p.kind, 'npm')
+  assert.equal(p.name, 'bili-duty')
+  assert.equal(p.version, null)
+})
+check('parseTarget: 包名@版本', () => {
+  const p = parseTarget('bili-duty@0.1.3')
+  assert.equal(p.kind, 'npm')
+  assert.equal(p.name, 'bili-duty')
+  assert.equal(p.version, '0.1.3')
+})
+check('parseTarget: @scope/包名 → npm（不带版本）', () => {
+  const p = parseTarget('@liustack/modlens')
+  assert.equal(p.kind, 'npm')
+  assert.equal(p.name, '@liustack/modlens')
+  assert.equal(p.version, null)
+})
+check('parseTarget: @scope/包名@版本', () => {
+  const p = parseTarget('@liustack/modlens@3.27.1')
+  assert.equal(p.kind, 'npm')
+  assert.equal(p.name, '@liustack/modlens')
+  assert.equal(p.version, '3.27.1')
+})
+check('parseTarget: 空 → null', () => assert.equal(parseTarget('   '), null))
+check('repositoryMatches：命中同一 repo', () =>
+  assert.equal(
+    repositoryMatches({ repository: 'git+https://github.com/k423Charotte/bili-duty.git' }, 'k423Charotte', 'bili-duty'),
+    true,
+  ))
+check('repositoryMatches：同名但不同 owner 必须拒绝', () =>
+  assert.equal(
+    repositoryMatches({ repository: 'git+https://github.com/someone-else/bili-duty.git' }, 'k423Charotte', 'bili-duty'),
+    false,
+  ))
+check('manifestRoutes：npm 目标默认不含 needsProxy 路线', () => {
+  const routes = manifestRoutes(parseTarget('bili-duty@0.1.3'), { includeNeedsProxy: false })
+  assert.ok(routes.length > 0)
+  assert.equal(routes.some((r) => r.needsProxy), false)
+})
+check('manifestRoutes：github 目标默认不含 needsProxy 路线', () => {
+  const routes = manifestRoutes(parseTarget('k423Charotte/bili-duty'), { includeNeedsProxy: false })
+  assert.ok(routes.length > 0)
+  assert.equal(routes.some((r) => r.needsProxy), false)
+})
+check('manifestRoutes：includeNeedsProxy=true 时包含 needsProxy 路线', () => {
+  const routes = manifestRoutes(parseTarget('k423Charotte/bili-duty'), { includeNeedsProxy: true })
+  assert.equal(routes.some((r) => r.needsProxy), true)
+})
+check('manifestRoutes：GitHub 降级路线带身份校验', () => {
+  const routes = manifestRoutes(parseTarget('k423Charotte/bili-duty'), { includeNeedsProxy: false })
+  const fallback = routes.filter((r) => r.requireRepository)
+  assert.ok(fallback.length > 0, '应至少有一条 npm 降级路线需要校验 repository 归属')
+})
 const registered = []
 const tools = { register: (t) => registered.push(t) }
 const ctx = { get: (k) => (k === 'tools' ? tools : undefined) }

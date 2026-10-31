@@ -229,8 +229,16 @@ check('manifestRoutes：GitHub 降级路线带身份校验', () => {
   assert.ok(fallback.length > 0, '应至少有一条 npm 降级路线需要校验 repository 归属')
 })
 console.log('\n[4.9] 评分（可解释、可复算）')
-const { scoreCandidate, scoreActivity, scorePopularity, scoreHealth, scoreRisk, scoreCompatibility, WEIGHTS } =
-  await import('../lib/score.js')
+const {
+  scoreCandidate,
+  scoreActivity,
+  scorePopularity,
+  scoreHealth,
+  scoreRisk,
+  classifyCompat,
+  QUALITY_WEIGHTS,
+  COMPAT_TIER_RANK,
+} = await import('../lib/score.js')
 const NOW = Date.parse('2026-10-31T00:00:00Z')
 
 check('活跃度：7 天内 25 分', () => assert.equal(scoreActivity('2026-10-28T00:00:00Z', NOW).score, 25))
@@ -251,45 +259,52 @@ check('风险：安装期脚本扣满 5 分并提醒', () => {
   assert.equal(r.score, 0)
   assert.ok(r.caveats.some((text) => text.includes('安装期脚本')))
 })
-check('兼容：ok=40 / none=20 / incompatible=0', () => {
-  assert.equal(scoreCompatibility({ status: 'ok', fieldUsed: 'engines.dsh', requirements: {} }).score, 40)
-  assert.equal(scoreCompatibility({ status: 'none' }).score, 20)
-  assert.equal(scoreCompatibility({ status: 'incompatible', fieldUsed: 'peerDependencies' }).score, 0)
+check('兼容性分层：ok / none→ok / incompatible→blocked / error→unknown / 无→unknown', () => {
+  assert.equal(classifyCompat({ status: 'ok', fieldUsed: 'engines.dsh', requirements: {} }).tier, 'ok')
+  assert.equal(classifyCompat({ status: 'none' }).tier, 'ok')
+  assert.equal(classifyCompat({ status: 'incompatible', fieldUsed: 'peerDependencies' }).tier, 'blocked')
+  assert.equal(classifyCompat({ status: 'error' }).tier, 'unknown')
+  assert.equal(classifyCompat(undefined).tier, 'unknown')
 })
-check('总分 = 分项之和，且落在 0–100', () => {
+check('关掉「考虑兼容」→ 全部 ignored（不拦、不分层）', () => {
+  assert.equal(classifyCompat({ status: 'incompatible' }, { consider: false }).tier, 'ignored')
+})
+check('质量分 = 四维之和，满分 60，且不含兼容性', () => {
   const r = scoreCandidate(
     { stars: 1000, pushedAt: '2026-10-30T00:00:00Z', openIssues: 5, archived: false },
     { compat: { status: 'ok' } },
   )
-  const sum = Object.values(r.scoreParts).reduce((a, b) => a + b, 0)
-  assert.equal(r.score, sum)
-  assert.ok(r.score <= 100 && r.score >= 0)
-  assert.ok(Array.isArray(r.checklist) && r.checklist.length >= 4)
+  const sum = Object.values(r.qualityParts).reduce((a, b) => a + b, 0)
+  assert.equal(r.qualityScore, sum)
+  assert.equal(r.qualityParts.activity, 25)
+  assert.equal(r.qualityParts.risk, QUALITY_WEIGHTS.risk)
+  assert.ok(r.qualityScore <= 60)
 })
-check('不兼容的候选应明显低于兼容的（至少差 20 分）', () => {
+check('兼容性不影响质量分（同样输入，ok 与 incompatible 质量分相同）', () => {
   const base = { stars: 500, pushedAt: '2026-10-30T00:00:00Z', openIssues: 5 }
-  const ok = scoreCandidate(base, { compat: { status: 'ok' } }).score
-  const bad = scoreCandidate(base, { compat: { status: 'incompatible' } }).score
-  assert.ok(ok - bad >= 20, `兼容 ${ok} 与不兼容 ${bad} 差距不足`)
+  const a = scoreCandidate(base, { compat: { status: 'ok' } })
+  const b = scoreCandidate(base, { compat: { status: 'incompatible' } })
+  assert.equal(a.qualityScore, b.qualityScore)
+  assert.equal(a.compatTier, 'ok')
+  assert.equal(b.compatTier, 'blocked')
 })
-check('权重总和 = 100', () => {
-  const total = Object.values(WEIGHTS).reduce((a, b) => a + b, 0)
-  assert.equal(total, 100)
+check('质量权重总和 = 60（兼容性不在其中）', () => {
+  assert.equal(Object.values(QUALITY_WEIGHTS).reduce((a, b) => a + b, 0), 60)
 })
-check('不兼容 → 一票否决（分数归 0、vetoed=true、分项仍算出来）', () => {
-  const r = scoreCandidate(
-    { stars: 9999, pushedAt: '2026-10-30T00:00:00Z', openIssues: 1 },
-    { compat: { status: 'incompatible', fieldUsed: 'peerDependencies' } },
-  )
-  assert.equal(r.score, 0)
-  assert.equal(r.vetoed, true)
-  assert.ok(r.subtotal > 0, '分项之和应大于 0，说明是「被否决」而不是「没算」')
-  assert.ok(r.caveats.some((text) => text.includes('不兼容')))
-})
-check('兼容的不会被否决', () => {
-  const r = scoreCandidate({ stars: 100 }, { compat: { status: 'ok' } })
-  assert.equal(r.vetoed, false)
-  assert.ok(r.score > 0)
+check('分层排序：ok → unknown → blocked，同层按质量分降序', () => {
+  const items = [
+    { name: 'blocked', compatTier: 'blocked', qualityScore: 60 },
+    { name: 'unknown', compatTier: 'unknown', qualityScore: 50 },
+    { name: 'ok-low', compatTier: 'ok', qualityScore: 10 },
+    { name: 'ok-high', compatTier: 'ok', qualityScore: 40 },
+  ]
+  const sorted = items
+    .slice()
+    .sort(
+      (x, y) =>
+        (COMPAT_TIER_RANK[x.compatTier] ?? 1) - (COMPAT_TIER_RANK[y.compatTier] ?? 1) || y.qualityScore - x.qualityScore,
+    )
+  assert.deepEqual(sorted.map((x) => x.name), ['ok-high', 'ok-low', 'unknown', 'blocked'])
 })
 
 console.log('\n[5] 工具注册与调用')

@@ -276,6 +276,21 @@ check('权重总和 = 100', () => {
   const total = Object.values(WEIGHTS).reduce((a, b) => a + b, 0)
   assert.equal(total, 100)
 })
+check('不兼容 → 一票否决（分数归 0、vetoed=true、分项仍算出来）', () => {
+  const r = scoreCandidate(
+    { stars: 9999, pushedAt: '2026-10-30T00:00:00Z', openIssues: 1 },
+    { compat: { status: 'incompatible', fieldUsed: 'peerDependencies' } },
+  )
+  assert.equal(r.score, 0)
+  assert.equal(r.vetoed, true)
+  assert.ok(r.subtotal > 0, '分项之和应大于 0，说明是「被否决」而不是「没算」')
+  assert.ok(r.caveats.some((text) => text.includes('不兼容')))
+})
+check('兼容的不会被否决', () => {
+  const r = scoreCandidate({ stars: 100 }, { compat: { status: 'ok' } })
+  assert.equal(r.vetoed, false)
+  assert.ok(r.score > 0)
+})
 
 console.log('\n[5] 工具注册与调用')
 const registered = []

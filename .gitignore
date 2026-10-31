@@ -1,0 +1,16 @@
+# 依赖与构建产物
+node_modules/
+dist/
+
+# 打包与临时文件
+*.tgz
+*.zip
+*.log
+.DS_Store
+Thumbs.db
+tmp/
+.tmp/
+
+# 本机数据（插件运行时写到 ~/.dsh，不该进仓库）
+cache/
+*.local.json

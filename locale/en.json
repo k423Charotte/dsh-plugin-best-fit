@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Best Fit Plugin Finder",
+    "description": "Find DSH plugins inside the agent and check whether each one is compatible with your running DSH before installing it."
+  }
+}

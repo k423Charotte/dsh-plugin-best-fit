@@ -1,0 +1,73 @@
+{
+  "name": "dsh-plugin-best-fit",
+  "version": "0.1.0",
+  "description": "「寻找最合适的插件」— 在会话里搜 DSH 插件，并在安装前判断它是否适配你当前的 DSH 版本。",
+  "type": "module",
+  "main": "lib/index.js",
+  "license": "MIT",
+  "author": "k423Charotte",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/k423Charotte/dsh-plugin-best-fit.git"
+  },
+  "homepage": "https://github.com/k423Charotte/dsh-plugin-best-fit#readme",
+  "bugs": {
+    "url": "https://github.com/k423Charotte/dsh-plugin-best-fit/issues"
+  },
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "plugin-discovery",
+    "compatibility",
+    "semver"
+  ],
+  "engines": {
+    "dsh": ">=0.2.0-0 <0.3.0",
+    "node": ">=22"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "*"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/cordis": {
+      "optional": true
+    }
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "plugin": {
+      "schemaVersion": 1,
+      "category": "devtools",
+      "displayName": {
+        "zh-CN": "寻找最合适的插件",
+        "en": "Best Fit Plugin Finder"
+      },
+      "summary": {
+        "zh-CN": "在会话里搜 DSH 插件，并在安装前判断它是否适配你当前的 DSH 版本。",
+        "en": "Find DSH plugins inside the agent and check whether each one is compatible with your running DSH before installing it."
+      }
+    }
+  },
+  "exports": {
+    ".": "./lib/index.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json"
+  },
+  "files": [
+    "lib",
+    "locale",
+    "cordis.patch.yml",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/"
+  },
+  "scripts": {
+    "test": "node tools/smoke-test.mjs"
+  }
+}

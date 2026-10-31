@@ -1,0 +1,5 @@
+# dsh bundle patch：把本插件插入 profile 的层栈。
+# 卸载时删掉本文件的 insert 段（或 plugin_manager remove_bundle）。
+- insert:
+    - id: plugin-best-fit
+      name: 'dsh-plugin-best-fit'

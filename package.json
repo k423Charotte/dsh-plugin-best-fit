@@ -1,6 +1,6 @@
 {
   "name": "dsh-plugin-best-fit",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "「寻找最合适的插件」— 在会话里搜 DSH 插件，并在安装前判断它是否适配你当前的 DSH 版本。",
   "type": "module",
   "main": "lib/index.js",

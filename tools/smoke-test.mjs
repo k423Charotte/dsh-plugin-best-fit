@@ -270,8 +270,10 @@ check('关掉「考虑兼容」→ 全部 ignored（不拦、不分层）', () =
   assert.equal(classifyCompat({ status: 'incompatible' }, { consider: false }).tier, 'ignored')
 })
 check('质量分 = 四维之和，满分 60，且不含兼容性', () => {
+  // ⚠️ 用相对时间：写死日期会随天漂移（2026-11-07 踩过——固定 10-30 过了 8 天，活跃度就从 25 掉到 20）
+  const recent = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
   const r = scoreCandidate(
-    { stars: 1000, pushedAt: '2026-10-30T00:00:00Z', openIssues: 5, archived: false },
+    { stars: 1000, pushedAt: recent, openIssues: 5, archived: false },
     { compat: { status: 'ok' } },
   )
   const sum = Object.values(r.qualityParts).reduce((a, b) => a + b, 0)
